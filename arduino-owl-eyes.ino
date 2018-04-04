@@ -8,6 +8,7 @@
 #define DATA_PIN_LEFT 6
 #define DATA_PIN_RIGHT 7
 #define DATA_PIN_BUTTON 8
+#define DATA_PIN_HALL 2
 #define LED_COUNT 12
 
 // Parameter 1 = number of pixels
@@ -79,6 +80,9 @@ void setup() {
   // Enable internal pullups on the switch inputs
   pinMode(DATA_PIN_BUTTON, INPUT_PULLUP);
 
+  // Enable internal pullups on the switch inputs
+  pinMode(DATA_PIN_HALL, INPUT);
+
   //attachInterrupt(0, magnet_detect, FALLING);            // Initialize the intterrupt pin 0 (Arduino digital pin 2)
   
   // Kick off a pattern
@@ -93,6 +97,7 @@ void setup() {
 void loop() {
   // Switch patterns on a button press:
   bool bPaused = arrDelay[iDelay] == 0;
+  int iHallState = digitalRead(DATA_PIN_HALL);
 
   //Serial.println(digitalRead(DATA_PIN_BUTTON));
   if (bPaused && digitalRead(DATA_PIN_BUTTON) == LOW) // Button #1 pressed
@@ -103,10 +108,13 @@ void loop() {
     ledTimer.interval(arrDelay[iDelay++]);                        // update the delay based on the timeline
     ledTimer.reset();
   }
-  // else {
-  //   Ring1.Interval = Ring2.Interval = 200;
-  //   Ring1.Color1 = Ring2.Color1 = Ring1.Color(109, 255,0);
-  // }
+  Serial.println(iHallState);
+  if (bPaused && iHallState == LOW){
+    Serial.println("-reset");
+    iDelay = 0;
+    ledTimer.interval(arrDelay[iDelay++]);                        // update the delay based on the timeline
+    ledTimer.reset();
+  }
   
   // Update the rings.
   if (!bPaused && ledTimer.check() == 1) {         // if we are not on a pause step && the timer elapsed

@@ -1,5 +1,3 @@
 {
-    "board": "arduino:avr:uno",
-    "port": "COM3",
-    "sketch": "tree-eyes.ino"
+    "port": "COM3"
 }
