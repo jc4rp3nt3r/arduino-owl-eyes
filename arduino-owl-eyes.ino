@@ -7,7 +7,7 @@
 
 #define DATA_PIN_LEFT 6
 #define DATA_PIN_RIGHT 7
-#define DATA_PIN_BUTTON 8
+//#define DATA_PIN_BUTTON 8
 #define DATA_PIN_HALL 2
 #define LED_COUNT 12
 
@@ -60,30 +60,22 @@ const uint8_t PROGMEM gamma8[] = {                    // LED Gamma Correction ma
   177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
   215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
 
-// uint32_t eyeColorOn;
-// uint32_t eyeColorOff;
-
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
 
 void setup() {
-  Serial.begin(115200);
+  //Serial.begin(115200);
 
   // Initialize all the pixelStrips
   Ring1.setBrightness(30);
   Ring1.begin();
   Ring2.setBrightness(30);
   Ring2.begin();
-  
-  // Enable internal pullups on the switch inputs
-  pinMode(DATA_PIN_BUTTON, INPUT_PULLUP);
 
-  // Enable internal pullups on the switch inputs
-  pinMode(DATA_PIN_HALL, INPUT);
-
-  //attachInterrupt(0, magnet_detect, FALLING);            // Initialize the intterrupt pin 0 (Arduino digital pin 2)
+  pinMode(DATA_PIN_HALL, INPUT_PULLUP); 
+  attachInterrupt(digitalPinToInterrupt(DATA_PIN_HALL), hallOnChange, CHANGE);
   
   // Kick off a pattern
   uint32_t iColor = Ring1.Color(pgm_read_byte(&gamma8[187]), pgm_read_byte(&gamma8[255]), pgm_read_byte(&gamma8[64]));
@@ -95,51 +87,23 @@ void setup() {
 
 
 void loop() {
-  // Switch patterns on a button press:
   bool bPaused = arrDelay[iDelay] == 0;
-  int iHallState = digitalRead(DATA_PIN_HALL);
+  if (!bPaused && ledTimer.check() == 1) {        // if we are not on a pause step && the timer elapsed
+    Ring1.Update();                               // update ring 1
+    Ring2.Update();                               // update ring 2
 
-  //Serial.println(digitalRead(DATA_PIN_BUTTON));
-  if (bPaused && digitalRead(DATA_PIN_BUTTON) == LOW) // Button #1 pressed
-  {
-    Serial.print(millis());
-    Serial.println("-reset");
-    iDelay = 0;
-    ledTimer.interval(arrDelay[iDelay++]);                        // update the delay based on the timeline
-    ledTimer.reset();
-  }
-  Serial.println(iHallState);
-  if (bPaused && iHallState == LOW){
-    Serial.println("-reset");
-    iDelay = 0;
-    ledTimer.interval(arrDelay[iDelay++]);                        // update the delay based on the timeline
-    ledTimer.reset();
-  }
-  
-  // Update the rings.
-  if (!bPaused && ledTimer.check() == 1) {         // if we are not on a pause step && the timer elapsed
-    Ring1.Update();                                             // update ring 1
-    Ring2.Update();                                             // update ring 2
-
-    if (iDelay == ANIMATION_LEN-1) iDelay = 0;                  // array bounds safty check, reset the timeline if we hit the end
-    ledTimer.interval(arrDelay[iDelay++]);                      // update the delay based on the timeline
-    ledTimer.reset();
-
-
-    //Ring1.Color1 = Ring1.Wheel(Ring1.Index * 40);   // index 0 - 5
-    //Serial.println(ledDelay);
+    if (iDelay == ANIMATION_LEN-1) iDelay = 0;    // array bounds safty check, reset the timeline if we hit the end
+    ledTimer.interval(arrDelay[iDelay++]);        // update the delay based on the timeline
+    ledTimer.reset();                             // and reset the wait time
   }
 }
 
-
-void magnet_detect()//This function is called whenever a magnet/interrupt is detected by the arduino
-{
-  iDelay = 0;
-  ledTimer.interval(arrDelay[iDelay++]);                        // update the delay based on the timeline
-  ledTimer.reset();
-  Serial.print(millis());
-  Serial.println("-reset");
-  //Ring1.Color1 = Ring2.Color1 = Ring1.Color(0, 255,0);
+void hallOnChange() {                             // whenever we detect a change on the interrupt
+  if (arrDelay[iDelay] == 0) {                    // if the animation is currently paused
+    iDelay = 0;                                   // reset our delay index back to zero
+    ledTimer.interval(arrDelay[iDelay++]);        // update the interval based on the timeline
+    ledTimer.reset();                             // and reset the wait time
+  }
 }
 
 // Ring1 Completion Callback
